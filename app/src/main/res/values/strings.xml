@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Push</string>
+    <string name="channel_name">message_push</string>
+    <string name="channel_description">푸시알림채널입니다.</string>
+</resources>

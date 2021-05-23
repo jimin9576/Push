@@ -17,11 +17,14 @@ import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.util.HashMap;
@@ -29,6 +32,7 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     FirebaseFirestore fStore;
+    FirebaseDatabase fDatabase;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         fStore = FirebaseFirestore.getInstance();
+        fDatabase = FirebaseDatabase.getInstance();
     }
 
 
@@ -43,46 +48,20 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
 
+        getToken();
+
         DocumentReference documentReference = fStore.collection("users").document("userId"); //저장 위치 수정 필요
         documentReference.addSnapshotListener(this, new EventListener<DocumentSnapshot>() {
             @Override
             public void onEvent(@Nullable DocumentSnapshot value, @Nullable FirebaseFirestoreException error) {
                 if (value.exists()){
-                    //notification manager 생성!
-                    NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-
-                    String id = "message_push"; // 채널의 id 지정!
-                    CharSequence name = getString(R.string.channel_name); //사용자가 볼 수 있는 채널 이름!
-                    String description = getString(R.string.channel_description); // 채널에 대한 설명!
-
-                    int importance = NotificationManager.IMPORTANCE_DEFAULT; // 중요도를 default로 설정!
-
-                    // 채널을 생성해줍니다!
-                    NotificationChannel push_channel = new NotificationChannel(id, name, importance);
-
-                    push_channel.setDescription(description);
-
-                    notificationManager.createNotificationChannel(push_channel); //채널을 등록해줍니다!
-
-                    int notifyID = 1; //알림의 ID
-                    String CHANNEL_ID = "message_push";
-
-                    //알림 채널에 push라는 알림을 만들어 연결합니다!
-                    Notification push = new Notification.Builder(MainActivity.this, CHANNEL_ID)
-                            .setContentTitle("New Message")
-                            .setContentText("장지민님으로부터 사진 도착!!") //데이터베이스에 저장된 사용자의 이름과 카테고리로 수정 필요
-                            .setSmallIcon(R.drawable.bell)
-                            .setChannelId(CHANNEL_ID)
-                            .build();
-
-                    notificationManager.notify(notifyID, push);
+                    Toast.makeText(getApplicationContext(), value.toString(), Toast.LENGTH_SHORT).show();
+                    push();
                 } else {
                     Log.d("tag", "onEvent: Document do not exists");
                 }
             }
         });
-
-        getToken();
     }
 
     public void getToken(){ //디바이스 토큰 값을 받아오는 함수입니다!
@@ -101,8 +80,45 @@ public class MainActivity extends AppCompatActivity {
                         //생성된 디바이스 토큰 값을 데이터베이스에 저장합니다!
                         Map<String, String> PushToken = new HashMap<>();
                         PushToken.put("Token",token);
-                        fStore.collection("users").document("userId").set(PushToken); //저장 위치 수정 필요
+                    //   fStore.collection("users").document("userId").set(PushToken);
+                        DatabaseReference reference = fDatabase.getReference("Token");
+                        reference.setValue(token);
                     }
                 });
+    }
+
+    public void TokenRead(){
+
+    }
+
+    public void push(){
+        //notification manager 생성!
+        NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+
+        String id = "message_push"; // 채널의 id 지정!
+        CharSequence name = getString(R.string.channel_name); //사용자가 볼 수 있는 채널 이름!
+        String description = getString(R.string.channel_description); // 채널에 대한 설명!
+
+        int importance = NotificationManager.IMPORTANCE_DEFAULT; // 중요도를 default로 설정!
+
+        // 채널을 생성해줍니다!
+        NotificationChannel push_channel = new NotificationChannel(id, name, importance);
+
+        push_channel.setDescription(description);
+
+        notificationManager.createNotificationChannel(push_channel); //채널을 등록해줍니다!
+
+        int notifyID = 1; //알림의 ID
+        String CHANNEL_ID = "message_push";
+
+        //알림 채널에 push라는 알림을 만들어 연결합니다!
+        Notification push = new Notification.Builder(MainActivity.this, CHANNEL_ID)
+                .setContentTitle("New Message")
+                .setContentText("장지민님으로부터 사진 도착!!") //데이터베이스에 저장된 사용자의 이름과 카테고리로 수정 필요
+                .setSmallIcon(R.drawable.bell)
+                .setChannelId(CHANNEL_ID)
+                .build();
+
+        notificationManager.notify(notifyID, push);
     }
 }
